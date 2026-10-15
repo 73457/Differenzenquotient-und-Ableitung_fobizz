@@ -1,0 +1,520 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Differenzenquotient und Ableitungsfunktion</title>
+<style>
+  :root {
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    color: #192434;
+    background: #f3f6fa;
+    font-synthesis: none;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 20px; }
+  .app { max-width: 1120px; margin: auto; }
+  header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 16px; margin-bottom: 14px;
+  }
+  h1 { font-size: clamp(1.35rem, 3vw, 1.9rem); margin: 0 0 5px; }
+  .subtitle { margin: 0; color: #596579; }
+  button, input { font: inherit; }
+  button {
+    border: 1px solid #cbd5e1; border-radius: 9px; background: white;
+    padding: 9px 13px; cursor: pointer; color: #17243a;
+  }
+  button:hover { background: #f1f5f9; }
+  .card, .controls, .explanation {
+    border: 1px solid #dce3ec; background: white; border-radius: 13px;
+    box-shadow: 0 2px 8px #1528420a;
+  }
+  .controls { padding: 14px 16px; margin-bottom: 14px; }
+  .control-grid {
+    display: grid; grid-template-columns: minmax(220px, 1.3fr) minmax(220px, 1fr) 1fr;
+    gap: 14px; align-items: center;
+  }
+  label { font-weight: 650; font-size: .92rem; }
+  .function-row { display: flex; gap: 8px; margin-top: 5px; }
+  .function-row input {
+    min-width: 0; flex: 1; padding: 9px 10px; border: 1px solid #cbd5e1;
+    border-radius: 8px;
+  }
+  .slider-row { display: flex; align-items: center; gap: 10px; margin-top: 5px; }
+  input[type="range"] { width: 100%; accent-color: #2365bd; }
+  output { min-width: 48px; font-variant-numeric: tabular-nums; }
+  .switches { display: flex; flex-wrap: wrap; gap: 12px; }
+  .radio-group { border: 0; padding: 0; margin: 0; }
+  .radio-group legend { font-weight: 650; font-size: .92rem; margin-bottom: 6px; }
+  .radio-group label { font-weight: 450; margin-right: 10px; white-space: nowrap; }
+  .radio-group input { accent-color: #2365bd; }
+  .error { min-height: 1.35em; color: #b42318; font-size: .9rem; margin: 8px 0 0; }
+  .graphs { display: grid; gap: 12px; }
+  .card { overflow: hidden; }
+  .graph-heading { padding: 10px 14px 0; font-weight: 700; }
+  canvas {
+    display: block; width: 100%; height: 330px; touch-action: none;
+    background: #fafbfd;
+  }
+  .live-info {
+    display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px;
+    padding: 8px 14px 12px; color: #3c4b60; font-size: .94rem;
+  }
+  .formula { color: #25364d; font-variant-numeric: tabular-nums; }
+  .bottom-row {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+    gap: 10px; margin-top: 12px;
+  }
+  .explanation { padding: 13px 16px; line-height: 1.55; flex: 1 1 480px; }
+  .formula-limit { display: inline-block; margin-top: 4px; font-family: Georgia, serif; font-size: 1.08rem; }
+  .note { color: #5d6a7e; font-size: .86rem; margin: 10px 2px 0; }
+  .chat-panel {
+    position: fixed; z-index: 5; top: 68px; right: max(16px, calc((100vw - 1120px)/2));
+    width: min(360px, calc(100vw - 32px)); height: min(490px, calc(100vh - 90px));
+    display: none; flex-direction: column; background: white; border: 1px solid #cbd5e1;
+    border-radius: 14px; box-shadow: 0 12px 38px #10203b33; overflow: hidden;
+  }
+  .chat-panel.open { display: flex; }
+  .chat-head { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; background: #edf4ff; }
+  .chat-head strong { font-size: 1rem; }
+  .chat-messages { overflow-y: auto; padding: 12px; flex: 1; }
+  .bubble { max-width: 92%; padding: 9px 11px; border-radius: 12px; margin: 0 0 9px; line-height: 1.4; white-space: pre-wrap; }
+  .bubble.bot { background: #f0f3f7; }
+  .bubble.user { background: #dcecff; margin-left: auto; }
+  .chat-form { display: flex; gap: 7px; padding: 10px; border-top: 1px solid #e2e8f0; }
+  .chat-form input { min-width: 0; flex: 1; border: 1px solid #cbd5e1; border-radius: 8px; padding: 9px; }
+  @media (max-width: 760px) {
+    body { padding: 12px; }
+    .control-grid { grid-template-columns: 1fr; }
+    canvas { height: 280px; }
+    header { align-items: center; }
+  }
+</style>
+</head>
+<body>
+<main class="app">
+  <header>
+    <div>
+      <h1>Vom Differenzenquotienten zur Ableitung</h1>
+      <p class="subtitle">Bewege P und beobachte, wie sich die Sekantensteigung verändert.</p>
+    </div>
+    <button id="chat-toggle" type="button" aria-expanded="false" aria-controls="chat-panel">❔ Lernhilfe</button>
+  </header>
+
+  <section class="controls" aria-label="Einstellungen">
+    <div class="control-grid">
+      <div>
+        <label for="function-input">Funktion f(x)</label>
+        <div class="function-row">
+          <input id="function-input" value="x^2" aria-label="Funktionsterm">
+          <button id="apply-function" type="button">Anwenden</button>
+        </div>
+      </div>
+      <div>
+        <label for="d-slider">Abstand d</label>
+        <div class="slider-row">
+          <input id="d-slider" type="range" min="0.01" max="3" step="0.01" value="1">
+          <output id="d-value" for="d-slider">1,00</output>
+        </div>
+      </div>
+      <div class="switches">
+        <fieldset class="radio-group">
+          <legend>Sekantensteigung anzeigen</legend>
+          <label><input type="radio" name="show-slope" value="yes" checked> Ein</label>
+          <label><input type="radio" name="show-slope" value="no"> Aus</label>
+        </fieldset>
+        <fieldset class="radio-group">
+          <legend>Ableitungsgraph f′(x)</legend>
+          <label><input type="radio" name="show-derivative" value="yes" checked> Ein</label>
+          <label><input type="radio" name="show-derivative" value="no"> Aus</label>
+        </fieldset>
+      </div>
+    </div>
+    <p id="error-message" class="error" role="status"></p>
+  </section>
+
+  <section class="graphs" aria-label="Koordinatensysteme">
+    <article class="card">
+      <div class="graph-heading">Oben: Funktion f(x) und Sekante</div>
+      <canvas id="top-canvas" aria-label="Graph der Funktion mit Punkt P, Q und Sekante"></canvas>
+      <div class="live-info">
+        <span id="p-coords">P: —</span>
+        <span id="slope-formula" class="formula"></span>
+      </div>
+    </article>
+    <article class="card">
+      <div class="graph-heading">Unten: Sekantensteigung und Ableitungsfunktion</div>
+      <canvas id="bottom-canvas" aria-label="Graph der Ableitung mit Spurpunkt S"></canvas>
+      <div class="live-info">
+        <span id="s-coords">S: —</span>
+        <button id="clear-trail" type="button">Spur löschen</button>
+      </div>
+    </article>
+  </section>
+
+  <div class="bottom-row">
+    <div class="explanation">
+      Wenn d immer kleiner wird, nähert sich die Sekantensteigung der momentanen Änderungsrate bei x₀.
+      <br><span class="formula-limit">f′(x₀) = lim<sub>d→0</sub> (f(x₀) − f(x₀ − d)) / d</span>
+    </div>
+  </div>
+  <p class="note">Gitter und Achsen sind in beiden Schaubildern gleich skaliert. Ziehe den Punkt P entlang des Graphen.</p>
+</main>
+
+<aside id="chat-panel" class="chat-panel" aria-label="Lernhilfe-Chat">
+  <div class="chat-head">
+    <strong>Lernhilfe: Ableitungen</strong>
+    <button id="chat-close" type="button" aria-label="Chat schließen">✕</button>
+  </div>
+  <div id="chat-messages" class="chat-messages" aria-live="polite">
+    <div class="bubble bot">Hallo! Frag mich zum Beispiel: Was ist der Differenzenquotient? Was passiert für d gegen 0? Oder wie liest man f′(x₀)?</div>
+  </div>
+  <form id="chat-form" class="chat-form">
+    <input id="chat-input" placeholder="Stelle eine Frage …" autocomplete="off" aria-label="Deine Frage">
+    <button type="submit">Senden</button>
+  </form>
+</aside>
+
+<script src="https://cdn.jsdelivr.net/npm/mathjs@14.8.1/lib/browser/math.js"></script>
+<script>
+(() => {
+  "use strict";
+
+  const topCanvas = document.getElementById("top-canvas");
+  const bottomCanvas = document.getElementById("bottom-canvas");
+  const topCtx = topCanvas.getContext("2d");
+  const bottomCtx = bottomCanvas.getContext("2d");
+  const input = document.getElementById("function-input");
+  const dSlider = document.getElementById("d-slider");
+  const dValue = document.getElementById("d-value");
+  const errorMessage = document.getElementById("error-message");
+  const pCoords = document.getElementById("p-coords");
+  const sCoords = document.getElementById("s-coords");
+  const slopeFormula = document.getElementById("slope-formula");
+
+  let expression = "x^2";
+  let compiled = null;
+  let derivativeCompiled = null;
+  let derivativeIsSymbolic = true;
+  let x0 = 1;
+  let dragging = false;
+  let trail = [];
+
+  const XMIN = -5, XMAX = 5, YMIN = -5, YMAX = 5;
+  const fmt = (n, digits = 3) => Number.isFinite(n)
+    ? n.toFixed(digits).replace(".", ",").replace(/,?0+$/, "").replace(/,$/, "")
+    : "nicht definiert";
+  const isOn = name => document.querySelector('input[name="' + name + '"]:checked').value === "yes";
+
+  function f(x) {
+    try {
+      const y = compiled.evaluate({ x });
+      return typeof y === "number" && Number.isFinite(y) ? y : NaN;
+    } catch (_) { return NaN; }
+  }
+
+  function derivative(x) {
+    if (derivativeIsSymbolic && derivativeCompiled) {
+      try {
+        const y = derivativeCompiled.evaluate({ x });
+        if (typeof y === "number" && Number.isFinite(y)) return y;
+      } catch (_) {}
+    }
+    const h = 1e-5;
+    const left = f(x - h), right = f(x + h);
+    return Number.isFinite(left) && Number.isFinite(right) ? (right - left) / (2 * h) : NaN;
+  }
+
+  function slope() {
+    const d = Number(dSlider.value);
+    const a = f(x0), b = f(x0 - d);
+    return Number.isFinite(a) && Number.isFinite(b) ? (a - b) / d : NaN;
+  }
+
+  function setupCanvas(canvas, ctx) {
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.round(rect.width * dpr);
+    canvas.height = Math.round(rect.height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function geometry(canvas) {
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    const left = 48, right = w - 18, top = 16, bottom = h - 34;
+    return {
+      w, h, left, right, top, bottom,
+      px: x => left + (x - XMIN) / (XMAX - XMIN) * (right - left),
+      py: y => bottom - (y - YMIN) / (YMAX - YMIN) * (bottom - top),
+      xAt: px => XMIN + (px - left) / (right - left) * (XMAX - XMIN)
+    };
+  }
+
+  function arrow(ctx, x1, y1, x2, y2) {
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    const a = Math.atan2(y2 - y1, x2 - x1), len = 7;
+    ctx.beginPath();
+    ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 - len * Math.cos(a - Math.PI / 6), y2 - len * Math.sin(a - Math.PI / 6));
+    ctx.lineTo(x2 - len * Math.cos(a + Math.PI / 6), y2 - len * Math.sin(a + Math.PI / 6));
+    ctx.closePath(); ctx.fill();
+  }
+
+  function drawAxes(ctx, g, yLabel) {
+    ctx.clearRect(0, 0, g.w, g.h);
+    ctx.fillStyle = "#fbfcfe"; ctx.fillRect(0, 0, g.w, g.h);
+
+    // Dichtes Schulheft-Gitter: zwei kleine Kästchen pro Einheit.
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 20; i++) {
+      const x = g.left + i * (g.right - g.left) / 20;
+      ctx.strokeStyle = i % 2 === 0 ? "#dce3eb" : "#edf1f5";
+      ctx.beginPath(); ctx.moveTo(x, g.top); ctx.lineTo(x, g.bottom); ctx.stroke();
+      const y = g.top + i * (g.bottom - g.top) / 20;
+      ctx.beginPath(); ctx.moveTo(g.left, y); ctx.lineTo(g.right, y); ctx.stroke();
+    }
+
+    const xAxisY = g.py(0), yAxisX = g.px(0);
+    ctx.strokeStyle = "#28384d"; ctx.fillStyle = "#28384d"; ctx.lineWidth = 1.5;
+    arrow(ctx, g.left, xAxisY, g.right + 7, xAxisY);
+    arrow(ctx, yAxisX, g.bottom, yAxisX, g.top - 7);
+
+    ctx.font = "12px system-ui"; ctx.textAlign = "center"; ctx.textBaseline = "top";
+    for (let x = -5; x <= 5; x++) {
+      const px = g.px(x);
+      ctx.beginPath(); ctx.moveTo(px, xAxisY - 3); ctx.lineTo(px, xAxisY + 3); ctx.stroke();
+      if (x !== 0) ctx.fillText(String(x), px, xAxisY + 5);
+    }
+    ctx.textAlign = "right"; ctx.textBaseline = "middle";
+    for (let y = -5; y <= 5; y++) {
+      const py = g.py(y);
+      ctx.beginPath(); ctx.moveTo(yAxisX - 3, py); ctx.lineTo(yAxisX + 3, py); ctx.stroke();
+      if (y !== 0) ctx.fillText(String(y), yAxisX - 6, py);
+    }
+
+    ctx.font = "bold 13px system-ui"; ctx.textAlign = "right"; ctx.textBaseline = "bottom";
+    ctx.fillText("x", g.right + 7, xAxisY - 5);
+    ctx.textAlign = "left"; ctx.textBaseline = "top";
+    ctx.fillText(yLabel, yAxisX + 7, g.top + 2);
+  }
+
+  function graph(ctx, g, fn, color, width = 2.5, dash = []) {
+    ctx.save(); ctx.beginPath(); ctx.rect(g.left, g.top, g.right-g.left, g.bottom-g.top); ctx.clip();
+    ctx.strokeStyle = color; ctx.lineWidth = width; ctx.setLineDash(dash);
+    let started = false, lastY = NaN;
+    const count = Math.max(400, Math.floor(g.right - g.left));
+    for (let i = 0; i <= count; i++) {
+      const x = XMIN + i / count * (XMAX - XMIN);
+      const y = fn(x);
+      if (!Number.isFinite(y) || Math.abs(y) > 1e5) { started = false; continue; }
+      const py = g.py(y);
+      // Break the line across undefined regions or very large discontinuities.
+      if (!Number.isFinite(lastY) || Math.abs(py - lastY) > (g.bottom - g.top) * 0.22) started = false;
+      if (started) ctx.lineTo(g.px(x), py);
+      else { ctx.moveTo(g.px(x), py); started = true; }
+      lastY = py;
+    }
+    ctx.stroke(); ctx.restore();
+  }
+
+  function dot(ctx, x, y, color, radius = 5) {
+    ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.fillStyle = color; ctx.fill();
+    ctx.lineWidth = 1.5; ctx.strokeStyle = "#fff"; ctx.stroke();
+  }
+
+  function drawTop(g) {
+    drawAxes(topCtx, g, "f(x)");
+    graph(topCtx, g, f, "#1558a6", 2.6);
+
+    const d = Number(dSlider.value), yp = f(x0), xq = x0 - d, yq = f(xq);
+    if (Number.isFinite(yp) && Number.isFinite(yq)) {
+      const m = (yp - yq) / d;
+      topCtx.save();
+      topCtx.beginPath(); topCtx.rect(g.left, g.top, g.right-g.left, g.bottom-g.top); topCtx.clip();
+      topCtx.strokeStyle = "#778397"; topCtx.lineWidth = 1.6; topCtx.setLineDash([7, 5]);
+      const yAtLeft = yp + m * (XMIN - x0), yAtRight = yp + m * (XMAX - x0);
+      topCtx.beginPath(); topCtx.moveTo(g.px(XMIN), g.py(yAtLeft)); topCtx.lineTo(g.px(XMAX), g.py(yAtRight)); topCtx.stroke();
+      topCtx.setLineDash([]);
+
+      if (yq >= YMIN && yq <= YMAX && yp >= YMIN && yp <= YMAX) {
+        topCtx.lineWidth = 3;
+        topCtx.strokeStyle = "#2071d1";
+        topCtx.beginPath(); topCtx.moveTo(g.px(xq), g.py(yq)); topCtx.lineTo(g.px(x0), g.py(yq)); topCtx.stroke();
+        topCtx.strokeStyle = "#d94841";
+        topCtx.beginPath(); topCtx.moveTo(g.px(x0), g.py(yq)); topCtx.lineTo(g.px(x0), g.py(yp)); topCtx.stroke();
+
+        topCtx.font = "12px system-ui"; topCtx.textAlign = "center";
+        topCtx.fillStyle = "#1558a6"; topCtx.fillText("Δx = " + fmt(d, 2), (g.px(xq)+g.px(x0))/2, g.py(yq)+17);
+        topCtx.fillStyle = "#b42318";
+        topCtx.fillText("Δy = " + fmt(yp-yq), g.px(x0)+35, (g.py(yp)+g.py(yq))/2);
+      }
+      if (xq >= XMIN && xq <= XMAX && yq >= YMIN && yq <= YMAX) {
+        dot(topCtx, g.px(xq), g.py(yq), "#ed8b24", 5);
+        topCtx.fillStyle = "#6b4317"; topCtx.font = "bold 12px system-ui"; topCtx.fillText("Q", g.px(xq)-11, g.py(yq)-10);
+      }
+      if (x0 >= XMIN && x0 <= XMAX && yp >= YMIN && yp <= YMAX) {
+        dot(topCtx, g.px(x0), g.py(yp), "#c02c4a", 6);
+        topCtx.fillStyle = "#76213a"; topCtx.font = "bold 12px system-ui"; topCtx.fillText("P", g.px(x0)+12, g.py(yp)-10);
+      }
+      topCtx.restore();
+    }
+  }
+
+  function drawBottom(g) {
+    drawAxes(bottomCtx, g, "f′(x)");
+    if (isOn("show-derivative")) graph(bottomCtx, g, derivative, "#16804a", 2.5);
+
+    bottomCtx.save(); bottomCtx.beginPath();
+    bottomCtx.rect(g.left, g.top, g.right-g.left, g.bottom-g.top); bottomCtx.clip();
+    for (const point of trail) {
+      if (Number.isFinite(point.x) && Number.isFinite(point.y) &&
+          point.x >= XMIN && point.x <= XMAX && point.y >= YMIN && point.y <= YMAX) {
+        dot(bottomCtx, g.px(point.x), g.py(point.y), "#e78b24", 3);
+      }
+    }
+    const m = slope();
+    if (Number.isFinite(m) && x0 >= XMIN && x0 <= XMAX && m >= YMIN && m <= YMAX) {
+      dot(bottomCtx, g.px(x0), g.py(m), "#c02c4a", 6);
+      bottomCtx.fillStyle = "#76213a"; bottomCtx.font = "bold 12px system-ui";
+      bottomCtx.fillText("S", g.px(x0)+11, g.py(m)-9);
+    }
+    bottomCtx.restore();
+  }
+
+  function update() {
+    dValue.textContent = Number(dSlider.value).toFixed(2).replace(".", ",");
+    const g = geometry(topCanvas);
+    drawTop(g);
+    drawBottom(geometry(bottomCanvas));
+    const yp = f(x0), m = slope();
+    pCoords.textContent = "P: (" + fmt(x0, 2) + " | " + fmt(yp) + ")";
+    sCoords.textContent = "S: (" + fmt(x0, 2) + " | " + fmt(m) + ")";
+    slopeFormula.textContent = isOn("show-slope") && Number.isFinite(m)
+      ? "m = (f(x₀) − f(x₀ − d)) / d = " + fmt(m) : "";
+  }
+
+  function configureFunction(term) {
+    try {
+      if (!window.math) throw new Error("Die Rechenbibliothek konnte nicht geladen werden. Prüfe die Internetverbindung.");
+      const candidate = math.compile(term);
+      // Check that the term is evaluable as a function of x.
+      candidate.evaluate({ x: 0.73 });
+      let derivativeCandidate;
+      try {
+        derivativeCandidate = math.derivative(term, "x").compile();
+        derivativeCandidate.evaluate({ x: 0.73 });
+      } catch (_) {
+        derivativeCandidate = null;
+      }
+      expression = term;
+      compiled = candidate;
+      derivativeCompiled = derivativeCandidate;
+      derivativeIsSymbolic = !!derivativeCandidate;
+      trail = [];
+      errorMessage.textContent = "";
+      update();
+    } catch (err) {
+      errorMessage.textContent = "Ungültiger Funktionsterm: " + (err.message || "Bitte prüfe die Eingabe.");
+    }
+  }
+
+  function pointerX(event, canvas) {
+    const rect = canvas.getBoundingClientRect();
+    return geometry(canvas).xAt(event.clientX - rect.left);
+  }
+  topCanvas.addEventListener("pointerdown", event => {
+    const g = geometry(topCanvas), rect = topCanvas.getBoundingClientRect();
+    const px = event.clientX - rect.left, py = event.clientY - rect.top;
+    const yp = f(x0);
+    if (Number.isFinite(yp) && Math.hypot(px - g.px(x0), py - g.py(yp)) < 28) {
+      dragging = true;
+      topCanvas.setPointerCapture(event.pointerId);
+      event.preventDefault();
+    }
+  });
+  topCanvas.addEventListener("pointermove", event => {
+    if (!dragging) return;
+    x0 = Math.max(XMIN, Math.min(XMAX, pointerX(event, topCanvas)));
+    const m = slope();
+    if (Number.isFinite(m)) trail.push({ x: x0, y: m });
+    update();
+  });
+  topCanvas.addEventListener("pointerup", () => { dragging = false; });
+  topCanvas.addEventListener("pointercancel", () => { dragging = false; });
+
+  document.getElementById("apply-function").addEventListener("click", () => configureFunction(input.value.trim()));
+  input.addEventListener("keydown", e => { if (e.key === "Enter") configureFunction(input.value.trim()); });
+  dSlider.addEventListener("input", () => {
+    const m = slope();
+    if (Number.isFinite(m)) trail.push({ x: x0, y: m });
+    update();
+  });
+  document.querySelectorAll('input[name="show-slope"], input[name="show-derivative"]').forEach(el =>
+    el.addEventListener("change", update)
+  );
+  document.getElementById("clear-trail").addEventListener("click", () => { trail = []; update(); });
+
+  const chatPanel = document.getElementById("chat-panel");
+  const chatToggle = document.getElementById("chat-toggle");
+  function toggleChat(open) {
+    chatPanel.classList.toggle("open", open);
+    chatToggle.setAttribute("aria-expanded", String(open));
+    if (open) document.getElementById("chat-input").focus();
+  }
+  chatToggle.addEventListener("click", () => toggleChat(!chatPanel.classList.contains("open")));
+  document.getElementById("chat-close").addEventListener("click", () => toggleChat(false));
+
+  function tutorAnswer(question) {
+    const q = question.toLowerCase();
+    if (q.includes("differenzenquotient") || q.includes("sekantensteigung") || q.includes("sekante")) {
+      return "Der Differenzenquotient (f(x₀) − f(x₀ − d)) / d ist die Steigung der Sekante durch Q und P. Er beschreibt die mittlere Änderung von f über die Strecke d.";
+    }
+    if (q.includes("lim") || q.includes("gegen 0") || q.includes("klein") || q.includes("d→")) {
+      return "Wenn d gegen 0 geht, rückt Q immer näher an P. Die Sekante nähert sich der Tangente. Der Grenzwert der Sekantensteigungen ist – sofern er existiert – die Ableitung f′(x₀).";
+    }
+    if (q.includes("ableitung") || q.includes("f'(x)") || q.includes("f′(x)") || q.includes("ableitungsfunktion")) {
+      return "Die Ableitungsfunktion f′ ordnet jeder Stelle x die momentane Steigung des Graphen von f zu. Im unteren Schaubild sind die Spurpunkte Sekantensteigungen; für kleines d liegen sie meist nahe am Graphen von f′.";
+    }
+    if (q.includes("delta") || q.includes("Δx") || q.includes("Δy")) {
+      return "Δx ist die horizontale Änderung von Q nach P und hier gleich d. Δy = f(x₀) − f(x₀ − d) ist die dazugehörige Änderung der Funktionswerte. Die Steigung ist Δy / Δx.";
+    }
+    if (q.includes("spur") || q.includes("punkt s")) {
+      return "S liegt im unteren Koordinatensystem bei (x₀ | m), wobei m die aktuelle Sekantensteigung ist. Die Spur zeigt, wie sich diese Steigungen beim Verschieben von P verändern.";
+    }
+    if (q.includes("sin") || q.includes("cos") || q.includes("e^") || q.includes("funktion")) {
+      return "Gib einen Term wie x^3 - 2*x, sin(x), e^x oder 0.5*x^2 + 1 ein und wähle „Anwenden“. Für trigonometrische Funktionen verwendet math.js Bogenmaß.";
+    }
+    return "Denkhilfe: Vergleiche Δy und Δx im Steigungsdreieck. Ihre Quotient ist die Sekantensteigung. Was verändert sich, wenn du d verkleinerst und P an eine andere Stelle ziehst?";
+  }
+
+  document.getElementById("chat-form").addEventListener("submit", event => {
+    event.preventDefault();
+    const chatInput = document.getElementById("chat-input");
+    const question = chatInput.value.trim();
+    if (!question) return;
+    const messages = document.getElementById("chat-messages");
+    const userBubble = document.createElement("div");
+    userBubble.className = "bubble user"; userBubble.textContent = question;
+    messages.appendChild(userBubble);
+    const answer = document.createElement("div");
+    answer.className = "bubble bot"; answer.textContent = tutorAnswer(question);
+    messages.appendChild(answer);
+    chatInput.value = "";
+    messages.scrollTop = messages.scrollHeight;
+  });
+
+  function resize() {
+    setupCanvas(topCanvas, topCtx);
+    setupCanvas(bottomCanvas, bottomCtx);
+    update();
+  }
+  compiled = math.compile(expression);
+  derivativeCompiled = math.derivative(expression, "x").compile();
+  window.addEventListener("resize", resize);
+  resize();
+})();
+</script>
+</body>
+</html>
